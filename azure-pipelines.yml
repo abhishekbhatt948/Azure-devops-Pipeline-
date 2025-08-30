@@ -1,0 +1,45 @@
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  dockerRegistryServiceConnection: '4cc079ba-8c17-4770-962f-570f16d86fbc'
+  imageRepository: 'devopslab'
+  containerRegistry: 'acrdevopslabapp.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+pool:
+  name: NodeJS-SelfHosted-Pool
+  demands:
+    - agent.os -equals Linux
+
+stages:
+- stage: Build
+  displayName: "Build and Push Stage"
+  jobs:
+  - job: Build
+    displayName: "Build Docker Image"
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: "Install Node.js"
+
+    - script: |
+        npm install
+        npm run build
+        npm test
+      displayName: "Install dependencies, build and test"
+
+    - task: Docker@2
+      displayName: "Build and Push image to ACR"
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
